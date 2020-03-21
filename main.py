@@ -6,6 +6,7 @@ from Interface import Interface_API
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setGeometry(0, 0, 880, 490)
         self.title = "App"
         self.menubar = self.menuBar()
         self.central_widget = Interface_API()
@@ -27,5 +28,5 @@ class App(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     ex = App()
-    ex.showMaximized()
+    ex.show()
     sys.exit(app.exec_())
