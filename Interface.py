@@ -28,13 +28,16 @@ class Interface_API(QWidget):
         self.address_btn = QRadioButton("Отображение\nпочтового индекса", self)
         self.address_text = QTextBrowser(self)
         self.layout_interface = QGridLayout(self)
+        self.spn = 0.05
         self.initUI()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_PageUp:
-            pass  # Увеличиваем масштаб
-        elif event.key() == Qt.Key_PageDown:
-            pass  # Уменьшаем масштаб
+        if event.key() == Qt.Key_PageUp and self.spn != 0.000390625:
+            self.spn /= 2
+            self.set_map()
+        elif event.key() == Qt.Key_PageDown and self.spn != 25.6:
+            self.spn *= 2
+            self.set_map()
         elif event.key() == Qt.Key_Up:
             pass  # Двгаем вверх
         elif event.key() == Qt.Key_Down:
@@ -75,6 +78,8 @@ class Interface_API(QWidget):
 
     def reset_address(self):
         self.address = {"Страна": '', "Город": '', "Улица": '', "Дом": '', "Почтовый индекс": ''}
+        self.spn = 0.05
+        self.toponym_to_find = ''
 
     def change_mode(self, mode):
         self.now_mode = mode
@@ -100,19 +105,20 @@ class Interface_API(QWidget):
         self.toponym_coordinates = get_coordinates_place(json_response)
         self.set_map()
 
-    def set_map(self, spn=(0.01, 0.01), pt='pm2dgl'):
+    def set_map(self, pt='pm2dgl'):
         if self.toponym_coordinates is None:
             return
         toponym_longitude, toponym_lattitude = self.toponym_coordinates
         map_params = {
             "ll": ",".join([toponym_longitude, toponym_lattitude]),
-            "spn": '{},{}'.format(*spn),
+            "spn": ",".join([str(self.spn), str(self.spn)]),
             "l": self.modes[self.now_mode],
             "size": '{},{}'.format(*self.size_map)
         }
         if pt is not None:
             map_params["pt"] = ",".join([toponym_longitude, toponym_lattitude, 'pm2dgl'])
         response = requests.get(MAP_API_SERVER, params=map_params)
+        print(response.url)
         pixmap = QPixmap()
         pixmap.loadFromData(BytesIO(response.content).getvalue())
         self.map_image.setPixmap(pixmap)
