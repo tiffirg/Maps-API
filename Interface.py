@@ -29,23 +29,30 @@ class Interface_API(QWidget):
         self.address_text = QTextBrowser(self)
         self.layout_interface = QGridLayout(self)
         self.spn = 0.05
+        self.delta = 0.05
         self.initUI()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_PageUp and self.spn != 0.000390625:
             self.spn /= 2
+            self.delta /= 2
             self.set_map()
         elif event.key() == Qt.Key_PageDown and self.spn != 25.6:
             self.spn *= 2
+            self.delta *= 2
             self.set_map()
         elif event.key() == Qt.Key_Up:
-            pass  # Двгаем вверх
+            self.toponym_coordinates[1] = str(float(self.toponym_coordinates[1]) + self.delta)
+            self.set_map()
         elif event.key() == Qt.Key_Down:
-            pass  # Двигаем вниз
+            self.toponym_coordinates[1] = str(float(self.toponym_coordinates[1]) - self.delta)
+            self.set_map()
         elif event.key() == Qt.Key_Right:
-            pass  # Двигаем вправо
+            self.toponym_coordinates[0] = str(float(self.toponym_coordinates[0]) + self.delta)
+            self.set_map()
         elif event.key() == Qt.Key_Left:
-            pass  # Двигаем влево
+            self.toponym_coordinates[0] = str(float(self.toponym_coordinates[0]) - self.delta)
+            self.set_map()
 
     def mousePressEvent(self, event):
         if event.button() == 1:  # левая
@@ -118,7 +125,6 @@ class Interface_API(QWidget):
         if pt is not None:
             map_params["pt"] = ",".join([toponym_longitude, toponym_lattitude, 'pm2dgl'])
         response = requests.get(MAP_API_SERVER, params=map_params)
-        print(response.url)
         pixmap = QPixmap()
         pixmap.loadFromData(BytesIO(response.content).getvalue())
         self.map_image.setPixmap(pixmap)
