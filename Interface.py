@@ -13,6 +13,7 @@ class Interface_API(QWidget):
         super().__init__()
         self.size_map = 650, 450
         self.address = None
+        self.mark_coordinates = None
         self.toponym_to_find = ''
         self.toponym_coordinates = None
         self.mode_address = True
@@ -110,12 +111,14 @@ class Interface_API(QWidget):
         for key, value in zip(self.address, address):
             self.address[key] = value
         self.toponym_coordinates = get_coordinates_place(json_response)
+        self.mark_coordinates = self.toponym_coordinates.copy()
         self.set_map()
 
     def set_map(self, pt='pm2dgl'):
         if self.toponym_coordinates is None:
             return
         toponym_longitude, toponym_lattitude = self.toponym_coordinates
+        mark_longitude, mark_lattitude = self.mark_coordinates
         map_params = {
             "ll": ",".join([toponym_longitude, toponym_lattitude]),
             "spn": ",".join([str(self.spn), str(self.spn)]),
@@ -123,7 +126,7 @@ class Interface_API(QWidget):
             "size": '{},{}'.format(*self.size_map)
         }
         if pt is not None:
-            map_params["pt"] = ",".join([toponym_longitude, toponym_lattitude, 'pm2dgl'])
+            map_params["pt"] = ",".join([mark_longitude, mark_lattitude, 'pm2dgl'])
         response = requests.get(MAP_API_SERVER, params=map_params)
         pixmap = QPixmap()
         pixmap.loadFromData(BytesIO(response.content).getvalue())
