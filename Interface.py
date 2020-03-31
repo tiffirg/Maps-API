@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton, QComboBox, QGroup
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PlaceSearch import get_response_about_place, get_coordinates_place
+from CompanySearch import search_company, get_coompany_coords
 import requests
 from io import BytesIO
 MAP_API_SERVER = "http://static-maps.yandex.ru/1.x/"
@@ -13,9 +14,10 @@ class Interface_API(QWidget):
         super().__init__()
         self.size_map = 650, 450
         self.address = None
-        self.mark_coordinates = None
+        self.mark_coordinates = []
         self.toponym_to_find = ''
         self.toponym_coordinates = None
+        self.company_coordinates = None
         self.mode_address = True
         self.now_mode = 'Схема'
         self.modes = {'Схема': 'map', 'Спутник': 'sat', 'Гибрид': 'sat,skl'}
@@ -59,7 +61,8 @@ class Interface_API(QWidget):
         if event.button() == 1:  # левая
             self.search_toponym()
         elif event.button() == 2:  # правая
-            pass
+            if len(self.mark_coordinates) != 0:
+                self.search_companys(self.mark_coordinates)
 
     def initUI(self):
         self.reset_address()
@@ -97,6 +100,7 @@ class Interface_API(QWidget):
             self.set_map()
 
     def search_toponym(self):
+        self.reset_address()
         new_toponym = self.search_edit.text()
         if new_toponym == '' or new_toponym == self.toponym_to_find:
             return
@@ -114,6 +118,17 @@ class Interface_API(QWidget):
         self.mark_coordinates = self.toponym_coordinates.copy()
         self.set_map()
 
+    def search_companys(self, coordinates):
+        json_response = search_company(coordinates).json()
+        string = json_response["features"][0]["properties"]["CompanyMetaData"]["address"]
+        address = string.split(", ")
+        for key, value in zip(self.address, address):
+            self.address[key] = value
+        self.address['Организация'] = json_response["features"][0]["properties"]["CompanyMetaData"]["Categories"][0]["name"]
+        self.company_coordinates = get_coompany_coords(json_response)
+        self.mark_coordinates = self.toponym_coordinates.copy()
+        self.set_map_via_company()
+
     def set_map(self, pt='pm2dgl'):
         if self.toponym_coordinates is None:
             return
@@ -127,6 +142,25 @@ class Interface_API(QWidget):
         }
         if pt is not None:
             map_params["pt"] = ",".join([mark_longitude, mark_lattitude, 'pm2dgl'])
+        response = requests.get(MAP_API_SERVER, params=map_params)
+        pixmap = QPixmap()
+        pixmap.loadFromData(BytesIO(response.content).getvalue())
+        self.map_image.setPixmap(pixmap)
+        self.set_text_address()
+
+    def set_map_via_company(self, pt='pm2dgl'):
+        if self.company_coordinates is None:
+            return
+        company_longitude, company_lattitude = self.company_coordinates
+        mark_longitude, mark_lattitude = self.company_coordinates
+        map_params = {
+            "ll": f"{company_longitude},{mark_lattitude}",
+            "spn": ",".join([str(self.spn), str(self.spn)]),
+            "l": self.modes[self.now_mode],
+            "size": '{},{}'.format(*self.size_map)
+        }
+        if pt is not None:
+            map_params["pt"] = ",".join([str(mark_longitude), str(mark_lattitude), 'pm2dgl'])
         response = requests.get(MAP_API_SERVER, params=map_params)
         pixmap = QPixmap()
         pixmap.loadFromData(BytesIO(response.content).getvalue())
