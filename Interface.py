@@ -125,13 +125,16 @@ class Interface_API(QWidget):
         for key, value in zip(self.address, address):
             self.address[key] = value
         self.address['Организация'] = json_response["features"][0]["properties"]["CompanyMetaData"]["Categories"][0]["name"]
-        self.company_coordinates = get_coompany_coords(json_response)
-        self.mark_coordinates = self.toponym_coordinates.copy()
-        self.set_map_via_company()
+        coords = get_coompany_coords(json_response)
+        self.company_coordinates = [str(coords[0]), str(coords[1])]
+        self.mark_coordinates = self.company_coordinates.copy()
+        self.set_map(type="company")
 
-    def set_map(self, pt='pm2dgl'):
+    def set_map(self, pt='pm2dgl', type='toponym'):
         if self.toponym_coordinates is None:
             return
+        if type == 'company':
+            self.toponym_coordinates = self.company_coordinates
         toponym_longitude, toponym_lattitude = self.toponym_coordinates
         mark_longitude, mark_lattitude = self.mark_coordinates
         map_params = {
@@ -142,25 +145,6 @@ class Interface_API(QWidget):
         }
         if pt is not None:
             map_params["pt"] = ",".join([mark_longitude, mark_lattitude, 'pm2dgl'])
-        response = requests.get(MAP_API_SERVER, params=map_params)
-        pixmap = QPixmap()
-        pixmap.loadFromData(BytesIO(response.content).getvalue())
-        self.map_image.setPixmap(pixmap)
-        self.set_text_address()
-
-    def set_map_via_company(self, pt='pm2dgl'):
-        if self.company_coordinates is None:
-            return
-        company_longitude, company_lattitude = self.company_coordinates
-        mark_longitude, mark_lattitude = self.company_coordinates
-        map_params = {
-            "ll": f"{company_longitude},{mark_lattitude}",
-            "spn": ",".join([str(self.spn), str(self.spn)]),
-            "l": self.modes[self.now_mode],
-            "size": '{},{}'.format(*self.size_map)
-        }
-        if pt is not None:
-            map_params["pt"] = ",".join([str(mark_longitude), str(mark_lattitude), 'pm2dgl'])
         response = requests.get(MAP_API_SERVER, params=map_params)
         pixmap = QPixmap()
         pixmap.loadFromData(BytesIO(response.content).getvalue())
